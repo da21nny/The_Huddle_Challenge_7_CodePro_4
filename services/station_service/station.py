@@ -18,7 +18,7 @@ def get_stations():
     except requests.exceptions.ConnectionError:
         return jsonify({"status": 500, "message": "Auth service instance error"}), 500
         
-    conn = sqlite3.connect('station.db')
+    conn = sqlite3.connect(database.DB_PATH)
     c = conn.cursor()
     c.execute("SELECT id, nombre FROM stations")
     stations = [{"id": row[0], "nombre": row[1]} for row in c.fetchall()]

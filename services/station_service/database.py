@@ -1,7 +1,10 @@
 import sqlite3
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'station.db')
 
 def init_db():
-    conn = sqlite3.connect('station.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS stations (id INTEGER PRIMARY KEY, nombre TEXT)''')
     # Insertar mesas iniciales si no existen

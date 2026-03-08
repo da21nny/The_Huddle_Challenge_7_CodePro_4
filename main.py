@@ -9,21 +9,52 @@ def main():
     print("❄️  SISTEMA DE RESERVAS - PENGUIN ACADEMY  ❄️")
     print("===========================================")
     print("Asegúrate de que los 3 servicios Flask estén corriendo.")
-    print("Iniciando sesión con usuario por defecto (admin)...")
     
-    try:
-        response = requests.post(f"{AUTH_URL}/login", json={"username": "admin", "password": "secreto123"})
-        if response.status_code != 200:
-            print("Error de autenticación. Credenciales inválidas.")
+    token = None
+    headers = {}
+    
+    while not token:
+        print("\n--- MENÚ DE INICIO ---")
+        print("1. Iniciar sesión")
+        print("2. Registrar nuevo usuario")
+        print("3. Salir")
+        
+        op = input("Elige una opción (1-3): ")
+        
+        if op == "3":
+            print("Saliendo del sistema...")
             return
             
-        token = response.json().get("token")
-        headers = {"Authorization": f"Bearer {token}"}
-        print("✅ Autenticación exitosa como 'admin'.\n")
-    except requests.exceptions.ConnectionError:
-        print("❌ Error: No se pudo conectar al servicio de Autenticación.")
-        print("Por favor, ejecuta arrancar_servicios.bat o enciende los servicios manualmente.")
-        return
+        elif op == "1":
+            user = input("Usuario: ")
+            pwd = input("Contraseña: ")
+            try:
+                response = requests.post(f"{AUTH_URL}/login", json={"username": user, "password": pwd})
+                if response.status_code == 200:
+                    token = response.json().get("token")
+                    headers = {"Authorization": f"Bearer {token}"}
+                    print(f"✅ Autenticación exitosa. Bienvenido '{user}'.\n")
+                else:
+                    print(f"❌ Error: {response.json().get('message')}")
+            except requests.exceptions.ConnectionError:
+                print("❌ Error: No se pudo conectar al servicio de Autenticación.")
+                return
+                
+        elif op == "2":
+            user = input("Nuevo Usuario: ")
+            pwd = input("Nueva Contraseña: ")
+            try:
+                response = requests.post(f"{AUTH_URL}/register", json={"username": user, "password": pwd})
+                if response.status_code == 201:
+                    print("✅", response.json().get("message"))
+                    print("Ahora puedes iniciar sesión.")
+                else:
+                    print(f"❌ Error: {response.json().get('message')}")
+            except requests.exceptions.ConnectionError:
+                print("❌ Error: No se pudo conectar al servicio de Autenticación.")
+                return
+        else:
+            print("⚠️ Opción inválida.")
     
     while True:
         print("\n--- MENÚ PRINCIPAL ---")
