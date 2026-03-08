@@ -19,7 +19,7 @@ def reservations():
     except requests.exceptions.ConnectionError:
         return jsonify({"status": 500, "message": "Auth service instance error"}), 500
         
-    conn = sqlite3.connect('reservation.db')
+    conn = sqlite3.connect(database.DB_PATH)
     c = conn.cursor()
     
     if request.method == 'POST':
