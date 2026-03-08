@@ -1,0 +1,61 @@
+# Plan de Implementación: Desafío Microservicios "El Mamut"
+
+Para modernizar el antiguo servidor monolítico "EL MAMUT", propongo una arquitectura basada en **Node.js y Express**, utilizando una estructura clara y modular que permita el escalamiento independiente y la mantenibilidad.
+
+## 🏗️ Estructura de Directorios Sugerida
+
+Propongo organizar el proyecto de la siguiente manera:
+
+```text
+The_Huddle_Challenge_6_CodePro_4/
+├── services/               # Directorio raíz para todos los microservicios
+│   ├── auth-service/       # Microservicio de Autenticación (JWT)
+│   │   ├── src/
+│   │   │   ├── controllers/# Lógica de rutas
+│   │   │   ├── models/     # Modelos de datos (DB privada)
+│   │   │   ├── routes/     # Definición de endpoints
+│   │   │   ├── middleware/ # Auth, validaciones
+│   │   │   └── index.js    # Punto de entrada
+│   │   ├── .env
+│   │   └── package.json
+│   │
+│   ├── product-service/    # Microservicio de Productos
+│   │   ├── src/
+│   │   │   ├── controllers/
+│   │   │   ├── models/
+│   │   │   ├── routes/
+│   │   │   └── index.js
+│   │   ├── .env
+│   │   └── package.json
+│   │
+│   └── order-service/      # Microservicio de Pedidos
+│       ├── src/
+│       │   ├── controllers/
+│       │   ├── models/
+│       │   ├── routes/
+│       │   └── index.js
+│       ├── .env
+│       └── package.json
+│
+├── docs/                   # Documentación técnica y diagramas
+├── docker-compose.yml      # (Opcional) Para orquestar los servicios
+└── README.md
+```
+
+## 🚀 Tecnologías Propuestas
+
+*   **Runtime**: Node.js
+*   **Framework**: Express.js (ligero y rápido)
+*   **Autenticación**: JSON Web Tokens (JWT)
+*   **Base de Datos**: MongoDB (usando Mongoose) o PostgreSQL (Sequelize), cada uno con su propia instancia/DB.
+*   **Documentación**: Swagger (opcional para el Bonus)
+
+## 🐧 Microservicios a Construir
+
+1.  **Auth Service**: Encargado de registrar usuarios y emitir tokens JWT. Los demás servicios validarán estos tokens.
+2.  **Product Service**: CRUD de productos (Hielo, Pescado, Laptops para Pingüinos).
+3.  **Order Service**: Crea pedidos relacionando usuarios y productos (se comunica vía API con Product Service para validar stock/existencia).
+
+---
+
+¿Te parece bien esta estructura para comenzar a crear las carpetas y los archivos base?
