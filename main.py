@@ -9,7 +9,7 @@ def main():
     print("===========================================")
     print("❄️  SISTEMA DE RESERVAS - PENGUIN ACADEMY  ❄️")
     print("===========================================")
-    print("Asegúrate de que los 3 servicios Flask estén corriendo.")
+    print("Asegúrate de que los 3 servicios estén corriendo en docker.")
     
     token = None
     headers = {}
@@ -62,9 +62,11 @@ def main():
         print("1. Ver mesas de evaluación disponibles")
         print("2. Registrar una nueva reserva")
         print("3. Ver todas las reservas")
-        print("4. Salir")
+        print("4. Editar nombre de una mesa")
+        print("5. Eliminar una reserva")
+        print("6. Salir")
         
-        opcion = input("Elige una opción (1-4): ")
+        opcion = input("Elige una opción (1-6): ")
         
         if opcion == "1":
             print("\nConsultando mesas (GET /stations)...")
@@ -101,7 +103,7 @@ def main():
             try:
                 res = requests.post(f"{RESERVATION_URL}/reservations", headers=headers, json=payload)
                 data = res.json()
-                if res.status_code == 201:
+                if res.status_code in [200, 201]:
                     print("✅", data.get("message"))
                 else:
                     print(f"❌ Error {data.get('status')}: {data.get('message')}")
@@ -125,8 +127,52 @@ def main():
                     print(f"Error {data.get('status')}: {data.get('message')}")
             except Exception as e:
                 print(f"Error de conexión: {e}")
-                
+
         elif opcion == "4":
+            print("\n-- Editar Nombre de Mesa --")
+            mesa_id = input("Ingrese el ID de la mesa a editar: ")
+            nuevo_nombre = input("Ingrese el nuevo nombre: ")
+            
+            try:
+                mesa_id = int(mesa_id)
+            except ValueError:
+                print("⚠️  Error: El ID de la mesa debe ser un número.")
+                continue
+                
+            print(f"\nEnviando actualización (PUT /stations/{mesa_id})...")
+            payload = {"nombre": nuevo_nombre}
+            try:
+                res = requests.put(f"{STATION_URL}/stations/{mesa_id}", headers=headers, json=payload)
+                data = res.json()
+                if res.status_code == 200:
+                    print("✅", data.get("message"))
+                else:
+                    print(f"❌ Error {data.get('status')}: {data.get('message')}")
+            except Exception as e:
+                print(f"Error de conexión: {e}")
+                
+        elif opcion == "5":
+            print("\n-- Eliminar Reserva --")
+            reserva_id = input("Ingrese el ID de la reserva a eliminar: ")
+            
+            try:
+                reserva_id = int(reserva_id)
+            except ValueError:
+                print("⚠️  Error: El ID de la reserva debe ser un número.")
+                continue
+                
+            print(f"\nEnviando eliminación (DELETE /reservations/{reserva_id})...")
+            try:
+                res = requests.delete(f"{RESERVATION_URL}/reservations/{reserva_id}", headers=headers)
+                data = res.json()
+                if res.status_code == 200:
+                    print("✅", data.get("message"))
+                else:
+                    print(f"❌ Error {data.get('status')}: {data.get('message')}")
+            except Exception as e:
+                print(f"Error de conexión: {e}")
+                
+        elif opcion == "6":
             print("\nSaliendo del sistema...")
             break
         else:
