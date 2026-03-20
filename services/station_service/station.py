@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 import sqlite3
 import requests
 import database
+import os
 
 app = Flask(__name__)
 
-AUTH_URL = "http://127.0.0.1:5001/verify"
+AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001/verify")
 
 @app.route('/stations', methods=['GET'])
 def get_stations():
@@ -29,4 +30,5 @@ def get_stations():
 if __name__ == '__main__':
     database.init_db()
     # Usamos el puerto 5002 para Station Service
-    app.run(port=5002)
+    port = int(os.getenv("STATION_SERVICE_PORT", 5002))
+    app.run(host='0.0.0.0', port=port)
