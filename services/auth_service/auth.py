@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import sqlite3
 import uuid
 import database
+import os
 
 app = Flask(__name__)
 
@@ -64,4 +65,5 @@ def verify():
 if __name__ == '__main__':
     database.init_db()
     # Usamos el puerto 5001 para Auth Service
-    app.run(port=5001)
+    port = int(os.getenv("AUTH_SERVICE_PORT", 5001))
+    app.run(host='0.0.0.0', port=port)

@@ -1,8 +1,9 @@
 import requests
+import os
 
-AUTH_URL = "http://127.0.0.1:5001"
-STATION_URL = "http://127.0.0.1:5002"
-RESERVATION_URL = "http://127.0.0.1:5003"
+AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001")
+STATION_URL = os.getenv("STATION_URL", "http://127.0.0.1:5002")
+RESERVATION_URL = os.getenv("RESERVATION_URL", "http://127.0.0.1:5003")
 
 def main():
     print("===========================================")
