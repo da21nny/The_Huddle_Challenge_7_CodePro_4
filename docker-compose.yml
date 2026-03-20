@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 1. Microservicio de Autenticación
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth_service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      - AUTH_SERVICE_PORT=5001
+    networks:
+      - penguin-network
+    volumes:
+      - ./services/auth_service:/app/services/auth_service
+
+  # 2. Microservicio de Estaciones (Mesas)
+  station-service:
+    build:
+      context: .
+      dockerfile: services/station_service/Dockerfile
+    container_name: station-service
+    ports:
+      - "5002:5002"
+    environment:
+      - STATION_SERVICE_PORT=5002
+      - AUTH_URL=http://auth-service:5001/verify
+    depends_on:
+      - auth-service
+    networks:
+      - penguin-network
+    volumes:
+      - ./services/station_service:/app/services/station_service
+
+  # 3. Microservicio de Reservas
+  reservation-service:
+    build:
+      context: .
+      dockerfile: services/reservation_service/Dockerfile
+    container_name: reservation-service
+    ports:
+      - "5003:5003"
+    environment:
+      - RESERVATION_SERVICE_PORT=5003
+      - AUTH_URL=http://auth-service:5001/verify
+    depends_on:
+      - auth-service
+    networks:
+      - penguin-network
+    volumes:
+      - ./services/reservation_service:/app/services/reservation_service
+
+networks:
+  penguin-network:
+    driver: bridge
