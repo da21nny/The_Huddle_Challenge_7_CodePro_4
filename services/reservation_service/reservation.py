@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 import sqlite3
 import requests
 import database
+import os
 
 app = Flask(__name__)
 
-AUTH_URL = "http://127.0.0.1:5001/verify"
+AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001/verify")
 
 @app.route('/reservations', methods=['POST', 'GET'])
 def reservations():
@@ -51,4 +52,5 @@ def reservations():
 if __name__ == '__main__':
     database.init_db()
     # Usamos el puerto 5003 para Reservation Service
-    app.run(port=5003)
+    port = int(os.getenv("RESERVATION_SERVICE_PORT", 5003))
+    app.run(host='0.0.0.0', port=port)
