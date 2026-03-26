@@ -12,8 +12,8 @@ from utils.circuit_breaker import circuit_breaker, CircuitBreakerOpenException
 
 app = Flask(__name__)
 
-@circuit_breaker(max_failures=3, time_window=10)
-@retry(max_retries=3, delay=1)
+@circuit_breaker(maximos_fallos=3, ventana_temporal=10) # Aplica proteccion de circuito con parametros en español
+@retry(max_reintentos=3, retraso=1) # Aplica reintentos automaticos con parametros en español
 def verificar_token_con_auth(auth_header):
     return requests.get(AUTH_URL, headers={"Authorization": auth_header}, timeout=3)
 
