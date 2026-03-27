@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify # Importa herramientas de Flask
 import psycopg2 # Importa motor de base de datos PostgreSQL
-import uuid # Importa generador de IDs unicos
-import database # Importa modulo local de base de datos
+import jwt # Importa libreria para procesar JWT
+import datetime # Importa modulo de tiempo para expiracion
+import database # Importa manejador de DB local
 import os # Importa utilidades del sistema operativo
+
+SECRET_KEY = os.getenv("JWT_SECRET", "super_secret_penguin_key") # Establece el secreto compartido
 
 app = Flask(__name__) # Inicializa la aplicacion Flask
 
@@ -17,12 +20,12 @@ def login(): # Funcion para procesar el ingreso de usuarios
     cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s", (username, password)) # Busca al usuario
     user_found = cursor.fetchone() # Obtiene el resultado de la busqueda
     
-    if user_found: # Si los datos son correctos
-        access_token = "token-" + str(uuid.uuid4()) # Genera un nuevo token aleatorio
-        cursor.execute("INSERT INTO tokens (token, username) VALUES (%s, %s)", (access_token, username)) # Guarda el token
-        connection.commit() # Confirma los cambios en la base de datos
-        connection.close() # Cierra la conexion actual
-        return jsonify({"status": 200, "token": access_token}), 200 # Devuelve el token exitosamente
+    if user_found: # Si el usuario existe
+        payload = {"username": username, "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)} # Crea el payload del token
+        access_token = jwt.encode(payload, SECRET_KEY, algorithm="HS256") # Firma el nuevo JWT
+        
+        connection.close() # Cierra la conexion
+        return jsonify({"status": 200, "token": access_token}), 200 # Devuelve el JWT generado
     
     connection.close() # Cierra la conexion si no hubo exito
     return jsonify({"status": 401, "message": "Credenciales inválidas"}), 401 # Indica error de autenticacion
@@ -47,20 +50,21 @@ def register(): # Funcion para dar de alta nuevos usuarios
         connection.close() # Cierra la conexion tras el error
         return jsonify({"status": 409, "message": "El usuario ya existe"}), 409 # Informa conflicto de duplicidad
 
-@app.route('/verify', methods=['GET']) # Define ruta para validar tokens
-def verify(): # Funcion para comprobar si un token es valido
-    auth_header = request.headers.get("Authorization", "") # Lee la cabecera de autorizacion
-    received_token = auth_header.replace("Bearer ", "") # Limpia el prefijo del token
+@app.route('/verify', methods=['GET']) # Define ruta de validacion
+def verify(): # Funcion para validar token
+    auth_header = request.headers.get("Authorization", "") # Obtiene el encabezado
+    received_token = auth_header.replace("Bearer ", "") # Extrae la cadena JWT
     
-    connection = database.get_connection() # Conecta con la base de datos de auth
-    cursor = connection.cursor() # Inicia el cursor de busqueda
-    cursor.execute("SELECT username FROM tokens WHERE token=%s", (received_token,)) # Busca el usuario dueño del token
-    token_owner = cursor.fetchone() # Obtiene el nombre del usuario
-    connection.close() # Libera la conexion a la DB
-    
-    if token_owner: # Si el token existe y es valido
-        return jsonify({"status": 200, "username": token_owner[0]}), 200 # Devuelve ok y el nombre de usuario
-    return jsonify({"status": 401, "message": "No autorizado"}), 401 # Indica que el token no sirve
+    if not received_token: # Si falta el token
+        return jsonify({"status": 401, "message": "Missing token"}), 401 # Error de token faltante
+        
+    try: # Intenta decodificar el token
+        payload = jwt.decode(received_token, SECRET_KEY, algorithms=["HS256"]) # Decodifica y valida
+        return jsonify({"status": 200, "username": payload["username"]}), 200 # Devuelve usuario valido
+    except jwt.ExpiredSignatureError: # Si el token expiro
+        return jsonify({"status": 401, "message": "Token expired"}), 401 # Error por caducidad
+    except jwt.InvalidTokenError: # Si el token es invalido
+        return jsonify({"status": 401, "message": "Invalid token"}), 401 # Error de formato invalido
 
 if __name__ == '__main__': # Punto de entrada del script
     database.init_db() # Crea las tablas si no existen
