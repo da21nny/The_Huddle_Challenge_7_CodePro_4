@@ -20,13 +20,13 @@ def main():
         print("2. Registrar nuevo usuario")
         print("3. Salir")
         
-        op = input("Elige una opción (1-3): ")
+        option = input("Elige una opción (1-3): ")
         
-        if op == "3":
+        if option == "3":
             print("Saliendo del sistema...")
             return
             
-        elif op == "1":
+        elif option == "1":
             user = input("Usuario: ")
             pwd = input("Contraseña: ")
             try:
@@ -41,7 +41,7 @@ def main():
                 print("❌ Error: No se pudo conectar al servicio de Autenticación.")
                 return
                 
-        elif op == "2":
+        elif option == "2":
             user = input("Nuevo Usuario: ")
             pwd = input("Nueva Contraseña: ")
             try:
@@ -66,9 +66,9 @@ def main():
         print("5. Eliminar una reserva")
         print("6. Salir")
         
-        opcion = input("Elige una opción (1-6): ")
+        option = input("Elige una opción (1-6): ")
         
-        if opcion == "1":
+        if option == "1":
             print("\nConsultando mesas (GET /stations)...")
             try:
                 res = requests.get(f"{STATION_URL}/stations", headers=headers)
@@ -82,7 +82,7 @@ def main():
             except Exception as e:
                 print(f"Error de conexión: {e}")
                 
-        elif opcion == "2":
+        elif option == "2":
             print("\n-- Nueva Reserva --")
             fecha = input("Ingrese fecha (ej. 2026-03-10): ")
             hora = input("Ingrese hora (ej. 14:00): ")
