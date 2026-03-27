@@ -1,35 +1,30 @@
 from flask import Flask, request, jsonify # Importa componentes para el servidor web
-import psycopg2 # Importa libreria para base de datos local
-import requests # Importa libreria para llamadas HTTP externas
-import database # Importa configuracion de base de datos local
-import os # Importa acceso a variables de entorno
-import sys # Importa utilidades del sistema para rutas
+import psycopg2 # Importa libreria de base de datos local
+import requests # Importa libreria para HTTP externo
+import jwt # Importa libreria JWT para validacion local
+import database # Importa configuracion de DB
+import os # Importa configuracion de variables de entorno
 
-# Configuracion de ruta para poder importar utilidades compartidas
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))) # Añade el directorio padre al path
-from utils.retry import retry # Importa el decorador de reintentos
-from utils.circuit_breaker import circuit_breaker, CircuitBreakerOpenException # Importa el circuit breaker
+SECRET_KEY = os.getenv("JWT_SECRET", "super_secret_penguin_key") # Establece clave secreta compartida
 
 app = Flask(__name__) # Crea la instancia de la aplicacion Flask
 
-@circuit_breaker(maximos_fallos=3, ventana_temporal=10) # Aplica proteccion ante fallos en cascada
-@retry(max_reintentos=3, retraso=1) # Reintenta la llamada si el servicio auth falla
-def verify_token_with_auth(auth_header): # Funcion que valida el token con el microservicio Auth
-    return requests.get(AUTH_URL, headers={"Authorization": auth_header}, timeout=3) # Realiza la peticion GET al servicio Auth
-
-AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001/verify") # Carga la URL de validacion desde el entorno
+def validate_jwt_local(auth_header): # Valida el JWT matematicamente
+    token = auth_header.replace("Bearer ", "") # Extrae la cadena
+    if not token: # Verifica si esta vacio
+        return None # Devuelve None si falla
+    try: # Inicia bloque de decodificacion
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"]) # Analiza la firma
+        return payload["username"] # Devuelve usuario valido
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError): # Captura tokens malos
+        return None # Devuelve None en caso de fallo
 
 @app.route('/stations', methods=['GET']) # Define el endpoint para listar mesas
 def get_stations(): # Funcion que maneja la obtencion de estaciones
-    auth_header = request.headers.get("Authorization", "") # Obtiene el token de los headers
-    try: # Inicia bloque protegido para llamadas entre servicios
-        service_response = verify_token_with_auth(auth_header) # Llama al servicio de autenticacion
-        if service_response.status_code != 200: # Si la respuesta no es satisfactoria
-            return jsonify({"status": 401, "message": "No autorizado"}), 401 # Retorna error de permisos
-    except CircuitBreakerOpenException as open_circuit_error: # Atrapa si el circuito esta abierto
-        return jsonify({"status": 503, "message": f"Circuit Breaker Activo: {str(open_circuit_error)}"}), 503 # Error por servicio bloqueado
-    except requests.exceptions.RequestException: # Atrapa fallos generales de red
-        return jsonify({"status": 500, "message": "Auth service error: No se pudo verificar el token"}), 500 # Error interno de conexion
+    auth_header = request.headers.get("Authorization", "") # Obtiene encabezado Auth
+    username = validate_jwt_local(auth_header) # Valida cadena JWT
+    if not username: # Verifica resultado de validacion
+        return jsonify({"status": 401, "message": "Unauthorized"}), 401 # Rechaza si es invalido
         
     db_connection = database.get_connection() # Abre la base de datos de estaciones
     db_cursor = db_connection.cursor() # Obtiene el cursor para consultas
@@ -41,13 +36,10 @@ def get_stations(): # Funcion que maneja la obtencion de estaciones
 
 @app.route('/stations/<int:station_id>', methods=['PUT']) # Define endpoint para actualizar nombre de mesa
 def update_station_name(station_id): # Funcion que procesa la actualizacion
-    validation_token = request.headers.get("Authorization", "") # Extrae el token para validar permisos
-    try: # Protege la operacion con validacion externa
-        auth_response = verify_token_with_auth(validation_token) # Valida el usuario actual
-        if auth_response.status_code != 200: # Si el usuario no tiene permisos
-            return jsonify({"status": 401, "message": "No tienes permiso para editar mesas"}), 401 # Deniega el acceso
-    except Exception as auth_error: # Atrapa cualquier fallo en la validacion
-        return jsonify({"status": 500, "message": f"Error validando la sesión: {auth_error}"}), 500 # Informa fallo técnico
+    auth_header = request.headers.get("Authorization", "") # Extrae token de autenticacion
+    username = validate_jwt_local(auth_header) # Realiza validacion sin estado
+    if not username: # Verifica exito de analisis
+        return jsonify({"status": 401, "message": "Permission denied"}), 401 # Rechaza la modificacion
 
     request_body = request.json or {} # Lee los datos enviados en el PUT
     updated_name = request_body.get("nombre") # Extrae el nuevo nombre deseado
@@ -69,7 +61,24 @@ def update_station_name(station_id): # Funcion que procesa la actualizacion
     
     return jsonify({"status": 200, "message": f"Mesa {station_id} ha sido renombrada a '{updated_name}'"}), 200 # Confirma exito
 
-if __name__ == '__main__': # Comprobacion de ejecucion directa
-    database.init_db() # Inicializa tablas de estaciones por defecto
-    service_port = int(os.getenv("STATION_SERVICE_PORT", 5002)) # Carga puerto desde el entorno
-    app.run(host='0.0.0.0', port=service_port) # Lanza el servidor en el puerto configurado
+@app.route('/stations/<int:station_id>', methods=['GET']) # Vincula endpoint para una estacion
+def get_single_station(station_id): # Obtiene una estacion especifica
+    auth_header = request.headers.get("Authorization", "") # Obtiene el encabezado
+    username = validate_jwt_local(auth_header) # Analiza el token
+    if not username: # Si el token falla
+        return jsonify({"status": 401, "message": "Unauthorized"}), 401 # Devuelve 401
+        
+    connection = database.get_connection() # Abre conexion a DB
+    cursor = connection.cursor() # Crea cursor
+    cursor.execute("SELECT id, nombre FROM stations WHERE id = %s", (station_id,)) # Lee fila
+    row = cursor.fetchone() # Extrae datos de fila
+    connection.close() # Cierra DB normalmente
+    
+    if not row: # Verifica si la estacion existe
+        return jsonify({"status": 404, "message": "Station not found"}), 404 # Devuelve no encontrado 
+    return jsonify({"status": 200, "data": {"id": row[0], "nombre": row[1]}}), 200 # Devuelve el payload
+
+if __name__ == '__main__': # Verifica ejecucion directa
+    database.init_db() # Prepara esquema
+    service_port = int(os.getenv("STATION_SERVICE_PORT", 5002)) # Obtiene puerto de entorno
+    app.run(host='0.0.0.0', port=service_port) # Inicia proceso del servidor
