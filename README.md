@@ -4,17 +4,21 @@
 
 ## 📋 Sobre el Proyecto
 
-El sistema permite a los usuarios autenticarse, consultar las mesas de evaluación disponibles (actualmente 3) y realizar reservas para una fecha y hora específica. La lógica de negocio asegura que **no pueda haber más de una reserva en la misma fecha, hora y mesa**. Ahora, el sistema es completamente resiliente, modular y está preparado para despliegues con Docker.
+El proyecto es una solución moderna, distribuida y resiliente para gestionar la reserva de estaciones de evaluación. Reemplazando un antiguo sistema monolítico, este sistema permite a los usuarios **autenticarse de forma segura mediante JWT (JSON Web Tokens)**, consultar estaciones disponibles (mesas de evaluación) y realizar reservas para fechas y horas específicas. 
+
+La lógica de negocio principal asegura la exclusividad: **no puede haber reservas duplicadas en la misma fecha, hora y estación**. 
+
+Destaca por estar construido con una arquitectura de microservicios, donde cada módulo posee su propia base de datos (PostgreSQL), cumple una única responsabilidad y se comunican ágilmente a través de APIs REST. Además, el código ha sido refactorizado recientemente aplicando Clean Code: traducciones de utilidades, nombres descriptivos en inglés y comentarios explicativos línea por línea. Está completamente dockerizado y listo para correr con `docker-compose`.
 
 ## 🏗️ Arquitectura del Sistema
 
 El proyecto está dividido en 3 microservicios independientes que se comunican a través de APIs REST, respaldados por bases de datos PostgreSQL aisladas:
 
-1.  **Auth Service (Puerto 5001):** Gestiona la autenticación de usuarios y la validación de tokens. Base de datos: `auth-db` (PostgreSQL).
-2.  **Station Service (Puerto 5002):** Administra el catálogo de estaciones/mesas disponibles. Base de datos: `station-db` (PostgreSQL).
-3.  **Reservation Service (Puerto 5003):** Controla el calendario de reservas y valida la exclusividad de horarios. Base de datos: `reservation-db` (PostgreSQL).
+1.  **Auth Service (Puerto 5001):** Gestiona el login de usuarios, generando y emitiendo los tokens **JWT** para el manejo de sesiones seguras. Base de datos: `auth-db` (PostgreSQL).
+2.  **Station Service (Puerto 5002):** Administra el catálogo de estaciones libres, validando el acceso a través de los tokens JWT emitidos de forma *stateless* (descentralizada). Base de datos: `station-db` (PostgreSQL).
+3.  **Reservation Service (Puerto 5003):** Controla el calendario de reservas, validando la disponibilidad de horarios y controlando la exclusividad autorizando peticiones vía JWT. Base de datos: `reservation-db` (PostgreSQL).
 
-Cuentan además con patrones de resiliencia (**Circuit Breaker** y **Retry**) para manejar interrupciones en la red de forma elegante.
+Cuentan además con implementaciones robustas de patrones de resiliencia (**Circuit Breaker** y **Retry**), completamente comentadas para manejar interrupciones en la red y retardos de BBDD de forma elegante.
 
 ## 📁 Estructura de Carpetas
 
@@ -87,7 +91,8 @@ El sistema se levanta de forma automatizada. Sigue estos pasos:
 -   **API REST:** Comunicación estándar usando HTTP (GET, POST, PUT, DELETE).
 -   **Dockerización:** Empaquetado de cada servicio y base de datos (PostgreSQL) en contenedores aislados.
 -   **Resiliencia Distribuida:** Implementación de patrones `Retry` y `Circuit Breaker` para manejar fallos de comunicación entre microservicios.
--   **Seguridad mediante Tokens (Bearer):** Validación de identidad en cada petición protegida.
+-   **Autenticación Descentralizada (JWT - Bearer):** Generación de JSON Web Tokens en el servicio central de Auth y validación *stateless* independiente en los demás microservicios.
+-   **Clean Code y Refactorización:** Código fuente reestructurado (variables en español, funciones en inglés) con comentarios detallados línea por línea en utilidades transversales.
 
 ---
 *Desarrollado para el desafío de Penguin Academy. ¡Salva el sistema, conviértete en leyenda!* 🐧💻
