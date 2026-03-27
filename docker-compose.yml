@@ -48,6 +48,7 @@ services:
       - DB_NAME=auth_db
       - DB_USER=penguin
       - DB_PASS=secreto
+      - JWT_SECRET=super_secret_penguin_key
     depends_on:
       - auth-db
     networks:
@@ -65,11 +66,11 @@ services:
       - "5002:5002"
     environment:
       - STATION_SERVICE_PORT=5002
-      - AUTH_URL=http://auth-service:5001/verify
       - DB_HOST=station-db
       - DB_NAME=station_db
       - DB_USER=penguin
       - DB_PASS=secreto
+      - JWT_SECRET=super_secret_penguin_key
     depends_on:
       - auth-service
       - station-db
@@ -88,11 +89,12 @@ services:
       - "5003:5003"
     environment:
       - RESERVATION_SERVICE_PORT=5003
-      - AUTH_URL=http://auth-service:5001/verify
+      - STATIONS_URL=http://station-service:5002/stations
       - DB_HOST=reservation-db
       - DB_NAME=reservation_db
       - DB_USER=penguin
       - DB_PASS=secreto
+      - JWT_SECRET=super_secret_penguin_key
     depends_on:
       - auth-service
       - reservation-db
