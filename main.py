@@ -36,7 +36,12 @@ def main():
                     headers = {"Authorization": f"Bearer {token}"}
                     print(f"✅ Autenticación exitosa. Bienvenido '{user}'.\n")
                 else:
-                    print(f"❌ Error: {response.json().get('message')}")
+                    try:
+                        error_msg = response.json().get('message', 'Error desconocido')
+                        print(f"❌ Error: {error_msg}")
+                    except requests.exceptions.JSONDecodeError:
+                        print(f"❌ Error del Servidor ({response.status_code}): El servicio devolvió una respuesta no válida.")
+                        print("💡 Tip: Verifica que la base de datos esté lista y el servicio de autenticación no haya fallado.")
             except requests.exceptions.ConnectionError:
                 print("❌ Error: No se pudo conectar al servicio de Autenticación.")
                 return
@@ -50,7 +55,11 @@ def main():
                     print("✅", response.json().get("message"))
                     print("Ahora puedes iniciar sesión.")
                 else:
-                    print(f"❌ Error: {response.json().get('message')}")
+                    try:
+                        error_msg = response.json().get('message', 'Error desconocido')
+                        print(f"❌ Error: {error_msg}")
+                    except requests.exceptions.JSONDecodeError:
+                        print(f"❌ Error del Servidor ({response.status_code}): No se pudo procesar el registro.")
             except requests.exceptions.ConnectionError:
                 print("❌ Error: No se pudo conectar al servicio de Autenticación.")
                 return
@@ -110,7 +119,7 @@ def main():
             except Exception as e:
                 print(f"Error de conexión: {e}")
                 
-        elif opcion == "3":
+        elif option == "3":
             print("\nConsultando reservas (GET /reservations)...")
             try:
                 res = requests.get(f"{RESERVATION_URL}/reservations", headers=headers)
@@ -128,7 +137,7 @@ def main():
             except Exception as e:
                 print(f"Error de conexión: {e}")
 
-        elif opcion == "4":
+        elif option == "4":
             print("\n-- Editar Nombre de Mesa --")
             mesa_id = input("Ingrese el ID de la mesa a editar: ")
             nuevo_nombre = input("Ingrese el nuevo nombre: ")
@@ -151,7 +160,7 @@ def main():
             except Exception as e:
                 print(f"Error de conexión: {e}")
                 
-        elif opcion == "5":
+        elif option == "5":
             print("\n-- Eliminar Reserva --")
             reserva_id = input("Ingrese el ID de la reserva a eliminar: ")
             
@@ -172,7 +181,7 @@ def main():
             except Exception as e:
                 print(f"Error de conexión: {e}")
                 
-        elif opcion == "6":
+        elif option == "6":
             print("\nSaliendo del sistema...")
             break
         else:
