@@ -4,14 +4,8 @@ import requests # Importa libreria para HTTP externo
 import jwt # Importa libreria JWT para validacion local
 import database # Importa configuracion de DB
 import os # Importa configuracion de variables de entorno
-import sys # Importa herramientas de ruta del sistema
 
 SECRET_KEY = os.getenv("JWT_SECRET", "super_secret_penguin_key") # Establece clave secreta compartida
-
-# Configuracion de ruta para poder importar utilidades compartidas
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))) # Añade el directorio padre al path
-from utils.retry import retry # Importa el decorador de reintentos
-from utils.circuit_breaker import circuit_breaker, CircuitBreakerOpenException # Importa el circuit breaker
 
 app = Flask(__name__) # Crea la instancia de la aplicacion Flask
 
