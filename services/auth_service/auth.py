@@ -8,61 +8,61 @@ app = Flask(__name__) # Inicializa la aplicacion Flask
 
 @app.route('/login', methods=['POST']) # Define ruta para iniciar sesion
 def login(): # Funcion para procesar el ingreso de usuarios
-    datos = request.json or {} # Obtiene datos enviados en formato JSON
-    nombre_usuario = datos.get('username') # Extrae el nombre de usuario
-    password = datos.get('password') # Extrae la contraseña del usuario
+    data = request.json or {} # Obtiene datos enviados en formato JSON
+    username = data.get('username') # Extrae el nombre de usuario
+    password = data.get('password') # Extrae la contraseña del usuario
     
-    conexion = database.get_connection() # Conecta a la base de datos
-    cursor = conexion.cursor() # Crea un cursor para ejecutar comandos
-    cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s", (nombre_usuario, password)) # Busca al usuario
-    usuario_encontrado = cursor.fetchone() # Obtiene el resultado de la busqueda
+    connection = database.get_connection() # Conecta a la base de datos
+    cursor = connection.cursor() # Crea un cursor para ejecutar comandos
+    cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s", (username, password)) # Busca al usuario
+    user_found = cursor.fetchone() # Obtiene el resultado de la busqueda
     
-    if usuario_encontrado: # Si los datos son correctos
-        token_acceso = "token-" + str(uuid.uuid4()) # Genera un nuevo token aleatorio
-        cursor.execute("INSERT INTO tokens (token, username) VALUES (%s, %s)", (token_acceso, nombre_usuario)) # Guarda el token
-        conexion.commit() # Confirma los cambios en la base de datos
-        conexion.close() # Cierra la conexion actual
-        return jsonify({"status": 200, "token": token_acceso}), 200 # Devuelve el token exitosamente
+    if user_found: # Si los datos son correctos
+        access_token = "token-" + str(uuid.uuid4()) # Genera un nuevo token aleatorio
+        cursor.execute("INSERT INTO tokens (token, username) VALUES (%s, %s)", (access_token, username)) # Guarda el token
+        connection.commit() # Confirma los cambios en la base de datos
+        connection.close() # Cierra la conexion actual
+        return jsonify({"status": 200, "token": access_token}), 200 # Devuelve el token exitosamente
     
-    conexion.close() # Cierra la conexion si no hubo exito
+    connection.close() # Cierra la conexion si no hubo exito
     return jsonify({"status": 401, "message": "Credenciales inválidas"}), 401 # Indica error de autenticacion
 
 @app.route('/register', methods=['POST']) # Define ruta para registrar usuarios
 def register(): # Funcion para dar de alta nuevos usuarios
-    datos = request.json or {} # Recibe informacion de registro
-    nombre_usuario = datos.get('username') # Toma el nombre de usuario deseado
-    password = datos.get('password') # Toma la contraseña elegida
+    data = request.json or {} # Recibe informacion de registro
+    username = data.get('username') # Toma el nombre de usuario deseado
+    password = data.get('password') # Toma la contraseña elegida
     
-    if not nombre_usuario or not password: # Valida que los campos no esten vacios
+    if not username or not password: # Valida que los campos no esten vacios
         return jsonify({"status": 400, "message": "Faltan credenciales"}), 400 # Error por datos incompletos
         
-    conexion = database.get_connection() # Abre conexion a la DB
-    cursor = conexion.cursor() # Prepara el cursor de ejecucion
+    connection = database.get_connection() # Abre conexion a la DB
+    cursor = connection.cursor() # Prepara el cursor de ejecucion
     try: # Intenta realizar el registro
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (nombre_usuario, password)) # Inserta el usuario
-        conexion.commit() # Guarda el nuevo usuario permanentemente
-        conexion.close() # Finaliza la conexion
+        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password)) # Inserta el usuario
+        connection.commit() # Guarda el nuevo usuario permanentemente
+        connection.close() # Finaliza la conexion
         return jsonify({"status": 201, "message": "Usuario registrado exitosamente"}), 201 # Confirma el exito
     except psycopg2.IntegrityError: # Captura si el usuario ya existe
-        conexion.close() # Cierra la conexion tras el error
+        connection.close() # Cierra la conexion tras el error
         return jsonify({"status": 409, "message": "El usuario ya existe"}), 409 # Informa conflicto de duplicidad
 
 @app.route('/verify', methods=['GET']) # Define ruta para validar tokens
 def verify(): # Funcion para comprobar si un token es valido
-    cabecera_autorizacion = request.headers.get("Authorization", "") # Lee la cabecera de autorizacion
-    token_recibido = cabecera_autorizacion.replace("Bearer ", "") # Limpia el prefijo del token
+    auth_header = request.headers.get("Authorization", "") # Lee la cabecera de autorizacion
+    received_token = auth_header.replace("Bearer ", "") # Limpia el prefijo del token
     
-    conexion = database.get_connection() # Conecta con la base de datos de auth
-    cursor = conexion.cursor() # Inicia el cursor de busqueda
-    cursor.execute("SELECT username FROM tokens WHERE token=%s", (token_recibido,)) # Busca el usuario dueño del token
-    usuario_dueno = cursor.fetchone() # Obtiene el nombre del usuario
-    conexion.close() # Libera la conexion a la DB
+    connection = database.get_connection() # Conecta con la base de datos de auth
+    cursor = connection.cursor() # Inicia el cursor de busqueda
+    cursor.execute("SELECT username FROM tokens WHERE token=%s", (received_token,)) # Busca el usuario dueño del token
+    token_owner = cursor.fetchone() # Obtiene el nombre del usuario
+    connection.close() # Libera la conexion a la DB
     
-    if usuario_dueno: # Si el token existe y es valido
-        return jsonify({"status": 200, "username": usuario_dueno[0]}), 200 # Devuelve ok y el nombre de usuario
+    if token_owner: # Si el token existe y es valido
+        return jsonify({"status": 200, "username": token_owner[0]}), 200 # Devuelve ok y el nombre de usuario
     return jsonify({"status": 401, "message": "No autorizado"}), 401 # Indica que el token no sirve
 
 if __name__ == '__main__': # Punto de entrada del script
     database.init_db() # Crea las tablas si no existen
-    puerto = int(os.getenv("AUTH_SERVICE_PORT", 5001)) # Obtiene el puerto de configuracion
-    app.run(host='0.0.0.0', port=puerto) # Inicia el servidor en todas las interfaces
+    port = int(os.getenv("AUTH_SERVICE_PORT", 5001)) # Obtiene el puerto de configuracion
+    app.run(host='0.0.0.0', port=port) # Inicia el servidor en todas las interfaces

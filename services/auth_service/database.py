@@ -11,13 +11,13 @@ def get_connection(): # Funcion para obtener conexion
 
 def init_db(): # Funcion para inicializar la base de datos de autenticacion
     try:
-        conexion = get_connection() # Abre la conexion a Postgres
-        cursor = conexion.cursor() # Crea el cursor para ejecutar sentencias SQL
+        connection = get_connection() # Abre la conexion a Postgres
+        cursor = connection.cursor() # Crea el cursor para ejecutar sentencias SQL
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''') # Crea tabla de usuarios
         cursor.execute('''CREATE TABLE IF NOT EXISTS tokens (token TEXT PRIMARY KEY, username TEXT)''') # Crea tabla de tokens
         cursor.execute("INSERT INTO users (username, password) VALUES ('admin', 'secreto123') ON CONFLICT (username) DO NOTHING") # Crea el administrador inicial
-        conexion.commit() # Guarda las tablas y el admin en el disco
-        conexion.close() # Cierra la conexion para liberar recursos
+        connection.commit() # Guarda las tablas y el admin en el disco
+        connection.close() # Cierra la conexion para liberar recursos
     except Exception as e:
         print(f"Error inicializando la DB auth: {e}")
 

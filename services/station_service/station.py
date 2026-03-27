@@ -14,62 +14,62 @@ app = Flask(__name__) # Crea la instancia de la aplicacion Flask
 
 @circuit_breaker(maximos_fallos=3, ventana_temporal=10) # Aplica proteccion ante fallos en cascada
 @retry(max_reintentos=3, retraso=1) # Reintenta la llamada si el servicio auth falla
-def verify_token_with_auth(cabecera_auth): # Funcion que valida el token con el microservicio Auth
-    return requests.get(AUTH_URL, headers={"Authorization": cabecera_auth}, timeout=3) # Realiza la peticion GET al servicio Auth
+def verify_token_with_auth(auth_header): # Funcion que valida el token con el microservicio Auth
+    return requests.get(AUTH_URL, headers={"Authorization": auth_header}, timeout=3) # Realiza la peticion GET al servicio Auth
 
 AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001/verify") # Carga la URL de validacion desde el entorno
 
 @app.route('/stations', methods=['GET']) # Define el endpoint para listar mesas
 def get_stations(): # Funcion que maneja la obtencion de estaciones
-    cabecera_auth = request.headers.get("Authorization", "") # Obtiene el token de los headers
+    auth_header = request.headers.get("Authorization", "") # Obtiene el token de los headers
     try: # Inicia bloque protegido para llamadas entre servicios
-        respuesta_servicio = verify_token_with_auth(cabecera_auth) # Llama al servicio de autenticacion
-        if respuesta_servicio.status_code != 200: # Si la respuesta no es satisfactoria
+        service_response = verify_token_with_auth(auth_header) # Llama al servicio de autenticacion
+        if service_response.status_code != 200: # Si la respuesta no es satisfactoria
             return jsonify({"status": 401, "message": "No autorizado"}), 401 # Retorna error de permisos
-    except CircuitBreakerOpenException as error_bloqueo: # Atrapa si el circuito esta abierto
-        return jsonify({"status": 503, "message": f"Circuit Breaker Activo: {str(error_bloqueo)}"}), 503 # Error por servicio bloqueado
+    except CircuitBreakerOpenException as open_circuit_error: # Atrapa si el circuito esta abierto
+        return jsonify({"status": 503, "message": f"Circuit Breaker Activo: {str(open_circuit_error)}"}), 503 # Error por servicio bloqueado
     except requests.exceptions.RequestException: # Atrapa fallos generales de red
         return jsonify({"status": 500, "message": "Auth service error: No se pudo verificar el token"}), 500 # Error interno de conexion
         
-    conexion_db = database.get_connection() # Abre la base de datos de estaciones
-    cursor_db = conexion_db.cursor() # Obtiene el cursor para consultas
-    cursor_db.execute("SELECT id, nombre FROM stations") # Ejecuta la consulta de todas las mesas
-    lista_mesas = [{"id": fila[0], "nombre": fila[1]} for fila in cursor_db.fetchall()] # Formatea los resultados en una lista
-    conexion_db.close() # Cierra la conexion a la base de datos
+    db_connection = database.get_connection() # Abre la base de datos de estaciones
+    db_cursor = db_connection.cursor() # Obtiene el cursor para consultas
+    db_cursor.execute("SELECT id, nombre FROM stations") # Ejecuta la consulta de todas las mesas
+    stations_list = [{"id": row[0], "nombre": row[1]} for row in db_cursor.fetchall()] # Formatea los resultados en una lista
+    db_connection.close() # Cierra la conexion a la base de datos
     
-    return jsonify({"status": 200, "data": lista_mesas}), 200 # Responde con la lista de estaciones encontradas
+    return jsonify({"status": 200, "data": stations_list}), 200 # Responde con la lista de estaciones encontradas
 
-@app.route('/stations/<int:id_mesa>', methods=['PUT']) # Define endpoint para actualizar nombre de mesa
-def update_station_name(id_mesa): # Funcion que procesa la actualizacion
-    token_validacion = request.headers.get("Authorization", "") # Extrae el token para validar permisos
+@app.route('/stations/<int:station_id>', methods=['PUT']) # Define endpoint para actualizar nombre de mesa
+def update_station_name(station_id): # Funcion que procesa la actualizacion
+    validation_token = request.headers.get("Authorization", "") # Extrae el token para validar permisos
     try: # Protege la operacion con validacion externa
-        respuesta_auth = verify_token_with_auth(token_validacion) # Valida el usuario actual
-        if respuesta_auth.status_code != 200: # Si el usuario no tiene permisos
+        auth_response = verify_token_with_auth(validation_token) # Valida el usuario actual
+        if auth_response.status_code != 200: # Si el usuario no tiene permisos
             return jsonify({"status": 401, "message": "No tienes permiso para editar mesas"}), 401 # Deniega el acceso
-    except Exception as error_autorizacion: # Atrapa cualquier fallo en la validacion
-        return jsonify({"status": 500, "message": f"Error validando la sesión: {error_autorizacion}"}), 500 # Informa fallo técnico
+    except Exception as auth_error: # Atrapa cualquier fallo en la validacion
+        return jsonify({"status": 500, "message": f"Error validando la sesión: {auth_error}"}), 500 # Informa fallo técnico
 
-    cuerpo_peticion = request.json or {} # Lee los datos enviados en el PUT
-    nombre_actualizado = cuerpo_peticion.get("nombre") # Extrae el nuevo nombre deseado
+    request_body = request.json or {} # Lee los datos enviados en el PUT
+    updated_name = request_body.get("nombre") # Extrae el nuevo nombre deseado
     
-    if not nombre_actualizado: # Valida que se haya enviado un nombre
+    if not updated_name: # Valida que se haya enviado un nombre
         return jsonify({"status": 400, "message": "Debes especificar el campo 'nombre'"}), 400 # Informa falta de dato
 
-    conexion = database.get_connection() # Conecta a la base de datos local
-    cursor = conexion.cursor() # Crea cursor de ejecucion SQL
+    connection = database.get_connection() # Conecta a la base de datos local
+    cursor = connection.cursor() # Crea cursor de ejecucion SQL
     
-    cursor.execute("UPDATE stations SET nombre = %s WHERE id = %s", (nombre_actualizado, id_mesa)) # Ejecuta actualizacion segura
+    cursor.execute("UPDATE stations SET nombre = %s WHERE id = %s", (updated_name, station_id)) # Ejecuta actualizacion segura
     
     if cursor.rowcount == 0: # Verifica si se encontro la mesa solicitada
-        conexion.close() # Cierra la DB si no hubo cambios
-        return jsonify({"status": 404, "message": f"La mesa {id_mesa} no existe"}), 404 # Error de mesa no encontrada
+        connection.close() # Cierra la DB si no hubo cambios
+        return jsonify({"status": 404, "message": f"La mesa {station_id} no existe"}), 404 # Error de mesa no encontrada
         
-    conexion.commit() # Guarda el cambio de nombre permanentemente
-    conexion.close() # Cierra la conexion final
+    connection.commit() # Guarda el cambio de nombre permanentemente
+    connection.close() # Cierra la conexion final
     
-    return jsonify({"status": 200, "message": f"Mesa {id_mesa} ha sido renombrada a '{nombre_actualizado}'"}), 200 # Confirma exito
+    return jsonify({"status": 200, "message": f"Mesa {station_id} ha sido renombrada a '{updated_name}'"}), 200 # Confirma exito
 
 if __name__ == '__main__': # Comprobacion de ejecucion directa
     database.init_db() # Inicializa tablas de estaciones por defecto
-    puerto_servicio = int(os.getenv("STATION_SERVICE_PORT", 5002)) # Carga puerto desde el entorno
-    app.run(host='0.0.0.0', port=puerto_servicio) # Lanza el servidor en el puerto configurado
+    service_port = int(os.getenv("STATION_SERVICE_PORT", 5002)) # Carga puerto desde el entorno
+    app.run(host='0.0.0.0', port=service_port) # Lanza el servidor en el puerto configurado
