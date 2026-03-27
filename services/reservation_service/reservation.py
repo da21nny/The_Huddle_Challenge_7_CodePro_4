@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify # Importa componentes de Flask para la API
-import sqlite3 # Importa libreria para manejo de Base de Datos
+import psycopg2 # Importa libreria para manejo de Base de Datos
 import requests # Importa libreria para realizar peticiones HTTP
 import database # Importa archivo local de configuracion de DB
 import os # Importa utilidades para variables de entorno
@@ -32,7 +32,7 @@ def reservations(): # Manejador principal de reservas
     except requests.exceptions.RequestException: # Captura fallos de comunicacion fisica
         return jsonify({"status": 500, "message": "Auth service error: No se pudo verificar el token"}), 500 # Error de infraestructura
         
-    conexion_sqlite = sqlite3.connect(database.DB_PATH) # Conecta a la base de datos de reservas
+    conexion_sqlite = database.get_connection() # Conecta a la base de datos de reservas
     cursor_sqlite = conexion_sqlite.cursor() # Crea el cursor de comandos SQL
     
     if request.method == 'POST': # Lógica para guardar una nueva reserva
@@ -45,12 +45,12 @@ def reservations(): # Manejador principal de reservas
             return jsonify({"status": 400, "message": "Faltan datos (fecha, hora o mesa_id)"}), 400 # Informa omision de datos
             
         try: # Intenta insertar la reserva en la tabla
-            cursor_sqlite.execute("INSERT INTO reservations (fecha, hora, mesa_id, username) VALUES (?, ?, ?, ?)",
+            cursor_sqlite.execute("INSERT INTO reservations (fecha, hora, mesa_id, username) VALUES (%s, %s, %s, %s)",
                       (fecha_reserva, hora_reserva, id_mesa, nombre_usuario)) # Realiza insercion protegida
             conexion_sqlite.commit() # Guarda la reserva en el disco
             conexion_sqlite.close() # Libera el archivo de base de datos
             return jsonify({"status": 201, "message": "Reserva creada exitosamente."}), 201 # Confirma registro exitoso
-        except sqlite3.IntegrityError: # Controla si la mesa ya esta ocupada
+        except psycopg2.IntegrityError: # Controla si la mesa ya esta ocupada
             conexion_sqlite.close() # Libera la conexion antes de salir
             return jsonify({"status": 409, "message": "Conflicto: La mesa ya está reservada en esa fecha y hora."}), 409 # Informa colision
 
@@ -73,9 +73,9 @@ def delete_reservation(id_reserva): # Funcion para eliminar una reserva por su I
     except requests.exceptions.RequestException: # Controla fallos de enlace de red
         return jsonify({"status": 500, "message": "Auth service error: No se pudo verificar el token"}), 500 # Informa fallo de red
 
-    conexion_db = sqlite3.connect(database.DB_PATH) # Abre conexion a la DB de reservas
+    conexion_db = database.get_connection() # Abre conexion a la DB de reservas
     cursor_db = conexion_db.cursor() # Inicia el cursor para borrar
-    cursor_db.execute("DELETE FROM reservations WHERE id = ?", (id_reserva,)) # Intenta ejecutar el borrado fisico
+    cursor_db.execute("DELETE FROM reservations WHERE id = %s", (id_reserva,)) # Intenta ejecutar el borrado fisico
     
     if cursor_db.rowcount == 0: # Comprueba si realmente se borro algo
         conexion_db.close() # Cierra la conexion si no hubo accion

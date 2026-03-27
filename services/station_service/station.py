@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify # Importa componentes para el servidor web
-import sqlite3 # Importa libreria para base de datos local
+import psycopg2 # Importa libreria para base de datos local
 import requests # Importa libreria para llamadas HTTP externas
 import database # Importa configuracion de base de datos local
 import os # Importa acceso a variables de entorno
@@ -31,7 +31,7 @@ def get_stations(): # Funcion que maneja la obtencion de estaciones
     except requests.exceptions.RequestException: # Atrapa fallos generales de red
         return jsonify({"status": 500, "message": "Auth service error: No se pudo verificar el token"}), 500 # Error interno de conexion
         
-    conexion_db = sqlite3.connect(database.DB_PATH) # Abre la base de datos de estaciones
+    conexion_db = database.get_connection() # Abre la base de datos de estaciones
     cursor_db = conexion_db.cursor() # Obtiene el cursor para consultas
     cursor_db.execute("SELECT id, nombre FROM stations") # Ejecuta la consulta de todas las mesas
     lista_mesas = [{"id": fila[0], "nombre": fila[1]} for fila in cursor_db.fetchall()] # Formatea los resultados en una lista
@@ -55,10 +55,10 @@ def update_station_name(id_mesa): # Funcion que procesa la actualizacion
     if not nombre_actualizado: # Valida que se haya enviado un nombre
         return jsonify({"status": 400, "message": "Debes especificar el campo 'nombre'"}), 400 # Informa falta de dato
 
-    conexion = sqlite3.connect(database.DB_PATH) # Conecta a la base de datos local
+    conexion = database.get_connection() # Conecta a la base de datos local
     cursor = conexion.cursor() # Crea cursor de ejecucion SQL
     
-    cursor.execute("UPDATE stations SET nombre = ? WHERE id = ?", (nombre_actualizado, id_mesa)) # Ejecuta actualizacion segura
+    cursor.execute("UPDATE stations SET nombre = %s WHERE id = %s", (nombre_actualizado, id_mesa)) # Ejecuta actualizacion segura
     
     if cursor.rowcount == 0: # Verifica si se encontro la mesa solicitada
         conexion.close() # Cierra la DB si no hubo cambios
