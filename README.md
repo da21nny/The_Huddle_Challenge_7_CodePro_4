@@ -4,66 +4,90 @@
 
 ## 📋 Sobre el Proyecto
 
-El sistema permite a los usuarios autenticarse, consultar las mesas de evaluación disponibles (actualmente 3) y realizar reservas para una fecha y hora específica. La lógica de negocio asegura que **no pueda haber más de una reserva en la misma fecha, hora y mesa**.
+El sistema permite a los usuarios autenticarse, consultar las mesas de evaluación disponibles (actualmente 3) y realizar reservas para una fecha y hora específica. La lógica de negocio asegura que **no pueda haber más de una reserva en la misma fecha, hora y mesa**. Ahora, el sistema es completamente resiliente, modular y está preparado para despliegues con Docker.
 
 ## 🏗️ Arquitectura del Sistema
 
-El proyecto está dividido en 3 microservicios independientes que se comunican a través de APIs REST:
+El proyecto está dividido en 3 microservicios independientes que se comunican a través de APIs REST, respaldados por bases de datos PostgreSQL aisladas:
 
-1.  **Auth Service (Puerto 5001):** Gestiona la autenticación de usuarios y la validación de tokens. Base de datos: `auth.db`.
-2.  **Station Service (Puerto 5002):** Administra el catálogo de estaciones/mesas disponibles. Base de datos: `station.db`.
-3.  **Reservation Service (Puerto 5003):** Controla el calendario de reservas y valida la exclusividad de horarios. Base de datos: `reservation.db`.
+1.  **Auth Service (Puerto 5001):** Gestiona la autenticación de usuarios y la validación de tokens. Base de datos: `auth-db` (PostgreSQL).
+2.  **Station Service (Puerto 5002):** Administra el catálogo de estaciones/mesas disponibles. Base de datos: `station-db` (PostgreSQL).
+3.  **Reservation Service (Puerto 5003):** Controla el calendario de reservas y valida la exclusividad de horarios. Base de datos: `reservation-db` (PostgreSQL).
 
-Cada servicio es autónomo, posee su propia base de datos SQLite y se encarga de su propia inicialización.
+Cuentan además con patrones de resiliencia (**Circuit Breaker** y **Retry**) para manejar interrupciones en la red de forma elegante.
 
 ## 📁 Estructura de Carpetas
 
 ```text
-The_Huddle_Challenge_6_CodePro_4/
+The_Huddle_Challenge_7_CodePro_4/
+├── docker-compose.yml       # Orquestación de contenedores y bases de datos
 ├── services/
 │   ├── auth_service/
-│   │   ├── auth.py          # Lógica del API Flask
-│   │   └── database.py      # Inicialización de SQLite
+│   │   ├── auth.py          # Lógica del API Flask (Auth)
+│   │   ├── database.py      # Inicialización y conexión a PostgreSQL
+│   │   ├── Dockerfile       # Receta de la imagen Docker
+│   │   └── requirements.txt
 │   ├── station_service/
-│   │   ├── station.py       # Lógica del API Flask
-│   │   └── database.py      # Inicialización de SQLite
-│   └── reservation_service/
-│       ├── reservation.py   # Lógica del API Flask
-│       └── database.py      # Inicialización de SQLite
-├── main.py                  # Orquestador/Cliente interactivo
-├── requirements.txt         # Dependencias del proyecto
+│   │   ├── station.py       # Lógica del API Flask (Stations)
+│   │   ├── database.py      # Inicialización y conexión a PostgreSQL
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── reservation_service/
+│   │   ├── reservation.py   # Lógica del API Flask (Reservations)
+│   │   ├── database.py      # Inicialización y conexión a PostgreSQL
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   └── utils/
+│       ├── circuit_breaker.py # Patrón Circuit Breaker
+│       └── retry.py           # Patrón Retry
+├── main.py                  # Cliente interactivo por consola
+├── requirements.txt         # Dependencias del cliente (requests)
 └── README.md                # Documentación
 ```
 
 ## 🛠️ Requisitos para Ejecutar
 
-Para correr este proyecto necesitas:
-- **Python 3.x** instalado.
-- Las librerías **Flask** y **Requests**.
+Para desplegar y usar este proyecto necesitas:
+- **Docker** y **Docker Compose** instalados (para levantar la infraestructura).
+- **Python 3.x** instalado (solo para ejecutar el cliente interactivo `main.py`).
 
-Puedes instalarlas rápidamente con:
+Opcionalmente, para probar el cliente de forma aislada:
 ```bash
+python -m venv .venv
+# En Windows: .\.venv\Scripts\activate
+# En Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ## 🚀 Pasos para Ejecución
 
-El sistema requiere que los 3 servicios estén activos simultáneamente. Abre **4 terminales** de forma independiente:
+El sistema se levanta de forma automatizada. Sigue estos pasos:
 
-1.  **Terminal 1 (Auth):** `python services/auth_service/auth.py`
-2.  **Terminal 2 (Stations):** `python services/station_service/station.py`
-3.  **Terminal 3 (Reservations):** `python services/reservation_service/reservation.py`
-4.  **Terminal 4 (Main):** `python main.py`
+1.  **Levantar la Infraestructura:**
+    Abre una terminal en la raíz del proyecto y ejecuta:
+    ```bash
+    docker-compose up --build -d
+    ```
+    *Nota: Las bases de datos y los microservicios se iniciarán. Los servicios tienen lógica de reintento para esperar a que las bases de datos estén listas.*
 
-Una vez encendidos, usa el **Menú Principal** en la Terminal 4 para interactuar con el sistema. El usuario por defecto es `admin` con contraseña `secreto123`.
+2.  **Ejecutar el Cliente Interactivo:**
+    En tu terminal local (fuera de Docker), ejecuta:
+    ```bash
+    python main.py
+    ```
+
+3.  **Iniciar Sesión:**
+    En el menú principal, usa las credenciales por defecto:
+    - **Usuario:** `admin`
+    - **Contraseña:** `secreto123`
 
 ## 🧠 Conceptos Básicos Aplicados
 
--   **Microservicios:** Dividir una aplicación grande en servicios pequeños que hacen una sola cosa bien.
--   **API REST:** Forma de comunicación estándar usando HTTP (GET para leer, POST para crear).
--   **SQLite:** Base de datos ligera que no requiere un servidor externo, ideal para servicios independientes.
--   **Tokens Bearer:** Un "ticket" de seguridad que el cliente envía en cada petición para demostrar que está logueado.
--   **Integridad de Datos:** Uso de `UNIQUE` en la base de datos para evitar que dos personas reserven lo mismo al mismo tiempo.
+-   **Microservicios:** Dividir una aplicación grande en servicios pequeños y especializados.
+-   **API REST:** Comunicación estándar usando HTTP (GET, POST, PUT, DELETE).
+-   **Dockerización:** Empaquetado de cada servicio y base de datos (PostgreSQL) en contenedores aislados.
+-   **Resiliencia Distribuida:** Implementación de patrones `Retry` y `Circuit Breaker` para manejar fallos de comunicación entre microservicios.
+-   **Seguridad mediante Tokens (Bearer):** Validación de identidad en cada petición protegida.
 
 ---
 *Desarrollado para el desafío de Penguin Academy. ¡Salva el sistema, conviértete en leyenda!* 🐧💻

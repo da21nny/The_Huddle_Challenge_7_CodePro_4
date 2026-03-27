@@ -1,17 +1,33 @@
-import sqlite3
-import os
+import psycopg2 # Importa motor de base de datos PostgreSQL
+import os # Importa utilidades del sistema de archivos
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'auth.db')
+def get_connection(): # Funcion para obtener conexion
+    return psycopg2.connect(
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME", "auth_db"),
+        user=os.getenv("DB_USER", "penguin"),
+        password=os.getenv("DB_PASS", "secreto")
+    )
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS tokens (token TEXT PRIMARY KEY, username TEXT)''')
-    # Crear usuario por defecto si no existe
-    c.execute("INSERT OR IGNORE INTO users (username, password) VALUES ('admin', 'secreto123')")
-    conn.commit()
-    conn.close()
+def init_db(): # Funcion para inicializar la base de datos de autenticacion
+    import time
+    intentos = 5
+    while intentos > 0:
+        try:
+            connection = get_connection() # Abre la conexion a Postgres
+            cursor = connection.cursor() # Crea el cursor para ejecutar sentencias SQL
+            cursor.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''') # Crea tabla de usuarios
+            cursor.execute('''CREATE TABLE IF NOT EXISTS tokens (token TEXT PRIMARY KEY, username TEXT)''') # Crea tabla de tokens
+            cursor.execute("INSERT INTO users (username, password) VALUES ('admin', 'secreto123') ON CONFLICT (username) DO NOTHING") # Crea el administrador inicial
+            connection.commit() # Guarda las tablas y el admin en el disco
+            connection.close() # Cierra la conexion para liberar recursos
+            print("📦 Base de datos Auth inicializada con éxito.")
+            return
+        except Exception as e:
+            intentos -= 1
+            print(f"⏳ Esperando a la base de datos auth... ({intentos} reintentos) - Error: {e}")
+            time.sleep(3)
+    print("❌ No se pudo conectar a la base de datos auth después de varios intentos.")
 
-if __name__ == '__main__':
-    init_db()
+if __name__ == '__main__': # Comprueba si el script se ejecuta directamente
+    init_db() # Lanza la creacion de la base de datos

@@ -1,6 +1,39 @@
 version: '3.8'
 
 services:
+  # --- Bases de datos ---
+  auth-db:
+    image: postgres:18.3-alpine
+    container_name: auth-db
+    environment:
+      - POSTGRES_USER=penguin
+      - POSTGRES_PASSWORD=secreto
+      - POSTGRES_DB=auth_db
+    networks:
+      - penguin-network
+
+  station-db:
+    image: postgres:18.3-alpine
+    container_name: station-db
+    environment:
+      - POSTGRES_USER=penguin
+      - POSTGRES_PASSWORD=secreto
+      - POSTGRES_DB=station_db
+    networks:
+      - penguin-network
+
+  reservation-db:
+    image: postgres:18.3-alpine
+    container_name: reservation-db
+    environment:
+      - POSTGRES_USER=penguin
+      - POSTGRES_PASSWORD=secreto
+      - POSTGRES_DB=reservation_db
+    networks:
+      - penguin-network
+
+  # --- Microservicios ---
+
   # 1. Microservicio de Autenticación
   auth-service:
     build:
@@ -11,6 +44,12 @@ services:
       - "5001:5001"
     environment:
       - AUTH_SERVICE_PORT=5001
+      - DB_HOST=auth-db
+      - DB_NAME=auth_db
+      - DB_USER=penguin
+      - DB_PASS=secreto
+    depends_on:
+      - auth-db
     networks:
       - penguin-network
     volumes:
@@ -27,8 +66,13 @@ services:
     environment:
       - STATION_SERVICE_PORT=5002
       - AUTH_URL=http://auth-service:5001/verify
+      - DB_HOST=station-db
+      - DB_NAME=station_db
+      - DB_USER=penguin
+      - DB_PASS=secreto
     depends_on:
       - auth-service
+      - station-db
     networks:
       - penguin-network
     volumes:
@@ -45,8 +89,13 @@ services:
     environment:
       - RESERVATION_SERVICE_PORT=5003
       - AUTH_URL=http://auth-service:5001/verify
+      - DB_HOST=reservation-db
+      - DB_NAME=reservation_db
+      - DB_USER=penguin
+      - DB_PASS=secreto
     depends_on:
       - auth-service
+      - reservation-db
     networks:
       - penguin-network
     volumes:
