@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 WORKDIR /app
 # Variables para mejorar el comportamiento de Python en Docker
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 # Instalamos dependencias
 COPY services/auth_service/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
