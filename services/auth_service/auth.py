@@ -4,6 +4,7 @@ import jwt # Importa libreria para procesar JWT
 import datetime # Importa modulo de tiempo para expiracion
 import database # Importa manejador de DB local
 import os # Importa utilidades del sistema operativo
+from werkzeug.security import generate_password_hash, check_password_hash # Importa utiles para encriptar contraseñas
 
 SECRET_KEY = os.getenv("JWT_SECRET", "super_secret_penguin_key") # Establece el secreto compartido
 
@@ -17,10 +18,10 @@ def login(): # Funcion para procesar el ingreso de usuarios
     
     connection = database.get_connection() # Conecta a la base de datos
     cursor = connection.cursor() # Crea un cursor para ejecutar comandos
-    cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s", (username, password)) # Busca al usuario
+    cursor.execute("SELECT password FROM users WHERE username=%s", (username,)) # Busca al usuario
     user_found = cursor.fetchone() # Obtiene el resultado de la busqueda
     
-    if user_found: # Si el usuario existe
+    if user_found and check_password_hash(user_found[0], password): # Si el usuario existe y coincide la contraseña
         payload = {"username": username, "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)} # Crea el payload del token
         access_token = jwt.encode(payload, SECRET_KEY, algorithm="HS256") # Firma el nuevo JWT
         
@@ -42,7 +43,8 @@ def register(): # Funcion para dar de alta nuevos usuarios
     connection = database.get_connection() # Abre conexion a la DB
     cursor = connection.cursor() # Prepara el cursor de ejecucion
     try: # Intenta realizar el registro
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password)) # Inserta el usuario
+        hashed_password = generate_password_hash(password) # Encripta la contraseña
+        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password)) # Inserta el usuario
         connection.commit() # Guarda el nuevo usuario permanentemente
         connection.close() # Finaliza la conexion
         return jsonify({"status": 201, "message": "Usuario registrado exitosamente"}), 201 # Confirma el exito
