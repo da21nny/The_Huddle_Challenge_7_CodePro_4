@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 WORKDIR /app
 # Variables para mejorar el comportamiento de Python en Docker
 ENV PYTHONDONTWRITEBYTECODE=1
