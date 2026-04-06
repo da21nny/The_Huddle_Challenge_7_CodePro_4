@@ -26,8 +26,8 @@ def validate_jwt_local(auth_header): # Valida el JWT localmente sin sobrecarga d
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError): # Captura errores de JWT
         return None # Devuelve fallo
 
-@circuit_breaker(maximos_fallos=3, ventana_temporal=10) # Protege contra fallos en cascada
-@retry(max_reintentos=3, retraso=1) # Reintenta la conexion si el servicio de mesas cae
+@circuit_breaker(max_failures=3, time_window=10) # Protege contra fallos en cascada
+@retry(max_retries=3, delay=1) # Reintenta la conexion si el servicio de mesas cae
 def check_station_exists(station_id, auth_header): # Funcion para verificar si la mesa existe por red
     return requests.get(f"{STATIONS_URL}/{station_id}", headers={"Authorization": auth_header}, timeout=3) # Llama al servicio de mesas
 
