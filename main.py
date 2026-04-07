@@ -1,5 +1,8 @@
 import requests
 import os
+from dotenv import load_dotenv
+
+load_dotenv() # Carga las variables del archivo .env automáticamente
 
 AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001")
 STATION_URL = os.getenv("STATION_URL", "http://127.0.0.1:5002")

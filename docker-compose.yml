@@ -41,14 +41,14 @@ services:
       dockerfile: services/auth_service/Dockerfile
     container_name: auth-service
     ports:
-      - "5001:5001"
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
     environment:
-      - AUTH_SERVICE_PORT=5001
+      - AUTH_SERVICE_PORT=${AUTH_SERVICE_PORT}
       - DB_HOST=auth-db
-      - DB_NAME=auth_db
-      - DB_USER=penguin
-      - DB_PASS=secreto
-      - JWT_SECRET=super_secret_penguin_key
+      - DB_NAME=${DB_AUTH_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - auth-db
     networks:
@@ -63,14 +63,14 @@ services:
       dockerfile: services/station_service/Dockerfile
     container_name: station-service
     ports:
-      - "5002:5002"
+      - "${STATION_SERVICE_PORT}:${STATION_SERVICE_PORT}"
     environment:
-      - STATION_SERVICE_PORT=5002
+      - STATION_SERVICE_PORT=${STATION_SERVICE_PORT}
       - DB_HOST=station-db
-      - DB_NAME=station_db
-      - DB_USER=penguin
-      - DB_PASS=secreto
-      - JWT_SECRET=super_secret_penguin_key
+      - DB_NAME=${DB_STATION_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - auth-service
       - station-db
@@ -86,15 +86,15 @@ services:
       dockerfile: services/reservation_service/Dockerfile
     container_name: reservation-service
     ports:
-      - "5003:5003"
+      - "${RESERVATION_SERVICE_PORT}:${RESERVATION_SERVICE_PORT}"
     environment:
-      - RESERVATION_SERVICE_PORT=5003
-      - STATIONS_URL=http://station-service:5002/stations
+      - RESERVATION_SERVICE_PORT=${RESERVATION_SERVICE_PORT}
+      - STATIONS_URL=${STATIONS_URL}
       - DB_HOST=reservation-db
-      - DB_NAME=reservation_db
-      - DB_USER=penguin
-      - DB_PASS=secreto
-      - JWT_SECRET=super_secret_penguin_key
+      - DB_NAME=${DB_RESERVATION_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - auth-service
       - reservation-db
