@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv() # Carga las variables del archivo .env automáticamente
 
-AUTH_URL = os.getenv("AUTH_URL", "http://127.0.0.1:5001")
-STATION_URL = os.getenv("STATION_URL", "http://127.0.0.1:5002")
-RESERVATION_URL = os.getenv("RESERVATION_URL", "http://127.0.0.1:5003")
+AUTH_URL = os.getenv("AUTH_URL")
+STATION_URL = os.getenv("STATION_URL")
+RESERVATION_URL = os.getenv("RESERVATION_URL")
 
 def main():
     print("===========================================")

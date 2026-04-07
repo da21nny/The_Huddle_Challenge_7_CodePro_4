@@ -6,9 +6,9 @@ services:
     image: postgres:18.3-alpine
     container_name: auth-db
     environment:
-      - POSTGRES_USER=penguin
-      - POSTGRES_PASSWORD=secreto
-      - POSTGRES_DB=auth_db
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_AUTH_NAME}
     networks:
       - penguin-network
 
@@ -16,9 +16,9 @@ services:
     image: postgres:18.3-alpine
     container_name: station-db
     environment:
-      - POSTGRES_USER=penguin
-      - POSTGRES_PASSWORD=secreto
-      - POSTGRES_DB=station_db
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_STATION_NAME}
     networks:
       - penguin-network
 
@@ -26,9 +26,9 @@ services:
     image: postgres:18.3-alpine
     container_name: reservation-db
     environment:
-      - POSTGRES_USER=penguin
-      - POSTGRES_PASSWORD=secreto
-      - POSTGRES_DB=reservation_db
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_RESERVATION_NAME}
     networks:
       - penguin-network
 
